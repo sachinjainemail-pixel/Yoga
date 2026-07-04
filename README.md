@@ -1,18 +1,19 @@
 # Sattva — Yoga & Ayurveda
 
-A self-contained, single-file Yoga & Ayurveda web app. No build step, no dependencies.
+Self-contained single-file Yoga & Ayurveda app. No build, no dependencies.
+Navigation is a left sidebar (tap the ☰ menu) that auto-hides when you pick a section.
 
 ## Files
-- `index.html` — the app (served at the site root)
-- `yoga.html` — identical copy (also works at `/yoga.html`)
+- index.html — the app (site root)
+- yoga.html — identical copy
 
 ## Sections
-Home · My Dosha (quiz) · Yoga (guided player) · Breathe (8 breathing exercises) ·
-Meditate (6 guided meditations) · Ayurveda · DIYs (Ayurvedic home remedies) ·
-Recipes (health recipes) · Progress · Premium.
+Daily: Home (tip of the day), My Dosha (quiz), Panchang (daily almanac)
+Practice: Yoga (guided player), Asanas (50 illustrated poses), Breathe, Meditate
+Ayurveda: Ayurveda, Food, Herbs, DIYs, Recipes
+You: Progress, Premium (1:1 counselling, 21-day diet, workshop, custom diet chart)
 
 ## GitHub Pages
-Settings → Pages → Deploy from a branch → `main` / `/(root)` → Save.
-Live at `https://<username>.github.io/<repo>/`.
+Settings -> Pages -> Deploy from a branch -> main / (root) -> Save.
 
-Wellness & educational content only — not a substitute for professional medical advice.
+Wellness & educational content only — not medical advice.

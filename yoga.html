@@ -37,17 +37,33 @@ header.top{
   background:color-mix(in srgb, var(--bg) 82%, transparent);
   border-bottom:1px solid var(--line);
 }
-.top .wrap{display:flex; align-items:center; gap:14px; height:60px}
+.top .wrap{display:flex; align-items:center; gap:12px; height:60px}
 .brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px; cursor:pointer}
 .mark{width:30px;height:30px;border-radius:50%;
   background:radial-gradient(circle at 30% 30%, var(--brand-2), var(--brand));
   display:grid;place-items:center;color:#fff;font-size:16px}
-nav.tabs{margin-left:auto; display:flex; gap:4px; overflow-x:auto; scrollbar-width:none}
-nav.tabs::-webkit-scrollbar{display:none}
+.menubtn{border:1.5px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;
+  width:40px;height:40px;border-radius:12px;font-size:18px;display:grid;place-items:center;flex:0 0 auto}
+.menubtn:hover{border-color:var(--brand-2);color:var(--brand-2)}
+.cur{margin-left:auto;color:var(--muted);font-weight:700;font-size:15px}
+
+/* ---------- left sidebar drawer ---------- */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:264px;max-width:82vw;z-index:120;
+  background:var(--panel);border-right:1px solid var(--line);box-shadow:var(--shadow);
+  display:flex;flex-direction:column;padding:14px;overflow-y:auto;
+  transform:translateX(-106%);transition:transform .28s ease}
+.sidebar.open{transform:none}
+.side-head{display:flex;align-items:center;justify-content:space-between;margin:2px 4px 14px}
+.side-sect{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:14px 8px 4px}
+nav.tabs{display:flex;flex-direction:column;gap:3px}
 .tab{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;
-  padding:8px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+  padding:11px 14px;border-radius:12px;cursor:pointer;text-align:left;width:100%;display:flex;align-items:center;gap:10px}
+.tab .ti{width:22px;text-align:center;font-size:16px}
 .tab.active{background:var(--brand);color:#fff}
-.tab:hover:not(.active){color:var(--ink)}
+.tab:hover:not(.active){background:color-mix(in srgb,var(--brand) 9%,transparent);color:var(--ink)}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:110;opacity:0;visibility:hidden;transition:.25s}
+.scrim.open{opacity:1;visibility:visible}
+@media(prefers-reduced-motion:reduce){.sidebar,.scrim{transition:none}}
 
 /* ---------- generic ---------- */
 section.view{padding:26px 0 90px; animation:fade .35s ease}
@@ -159,12 +175,22 @@ footer{border-top:1px solid var(--line);padding:26px 0;color:var(--muted);font-s
 
 <header class="top">
   <div class="wrap">
+    <button class="menubtn" id="menuBtn" onclick="openNav()" aria-label="Open menu" aria-expanded="false">☰</button>
     <div class="brand" onclick="go('home')">
       <span class="mark">☾</span><span>Sattva</span>
     </div>
-    <nav class="tabs" id="tabs"></nav>
+    <span class="cur" id="curTitle"></span>
   </div>
 </header>
+
+<aside class="sidebar" id="sidebar" aria-label="Sections">
+  <div class="side-head">
+    <div class="brand" onclick="go('home')"><span class="mark">☾</span><span>Sattva</span></div>
+    <button class="menubtn" onclick="closeNav()" aria-label="Close menu">✕</button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</aside>
+<div class="scrim" id="scrim" onclick="closeNav()"></div>
 
 <main class="wrap" id="app"></main>
 
@@ -433,21 +459,334 @@ const RECIPES = [
    benefits:"Nourishing, grounding energy bites — great for Vata and busy days. Rich, so enjoy in moderation."}
 ];
 
+/* ---------- Ayurvedic tips (tip of the day) ---------- */
+const TIPS = [
+  "Sip warm water through the day — it kindles digestion (agni) and gently flushes toxins.",
+  "Eat your largest meal at midday when digestive fire is strongest; keep dinner light and early.",
+  "Scrape your tongue each morning to clear overnight toxins and freshen the palate.",
+  "Never drink iced water with meals — it dampens the digestive fire. Warm or room-temperature is best.",
+  "Rise before sunrise (brahma muhurta) for a calmer, clearer mind all day.",
+  "Add a pinch of ginger and a squeeze of lime before meals to spark appetite and digestion.",
+  "Favour freshly cooked food over leftovers — Ayurveda prizes prana (life force), which fades with time.",
+  "Warm sesame-oil self-massage (abhyanga) before a shower calms the nerves and nourishes the skin.",
+  "Eat in a calm setting, without screens — how you eat matters as much as what you eat.",
+  "Golden milk (turmeric + warm milk + pepper) before bed soothes the body and supports sleep.",
+  "Chew each mouthful well; digestion begins in the mouth, not the stomach.",
+  "Leave one-third of your stomach empty at meals to give digestion room to work.",
+  "Ghee in moderation lubricates tissues, carries herbs deeper, and steadies Vata and Pitta.",
+  "Triphala at night is a gentle, time-honoured support for regular, healthy digestion.",
+  "Match your routine to the sun: active at midday, winding down as the light fades.",
+  "Cooling foods — cucumber, coconut, mint, sweet fruit — calm summer heat and Pitta.",
+  "Warm, moist, grounding foods (soups, stews, root veg) steady an anxious, airy Vata.",
+  "Light, spiced, dry foods lift a heavy, sluggish Kapha — go easy on dairy and sweets.",
+  "A short walk after meals (even 10 minutes) aids digestion far more than sitting still.",
+  "Fennel or CCF tea after eating eases bloating and settles the stomach.",
+  "Oil a few drops in the nostrils (nasya) can soothe dryness and clear the head.",
+  "Honey is medicinal — but never heat it; add to warm, not hot, drinks.",
+  "Go to bed by 10pm; the hours before midnight are the most restorative for the body.",
+  "Seasonal eating keeps you in balance — favour local, in-season produce as nature intends."
+];
+
+/* ---------- Herb library ---------- */
+const HERBS = [
+  {id:"ashwagandha", name:"Ashwagandha", sanskrit:"Withania somnifera", emoji:"🌱", dosha:["vata","kapha"],
+   benefit:"A grounding adaptogen that calms stress, supports steady energy, sleep and strength.",
+   use:"1/2 tsp powder in warm milk at night, or as directed on a standardised supplement.",
+   caution:"Avoid in pregnancy and with hyperthyroid conditions; can interact with sedatives and thyroid meds."},
+  {id:"triphala", name:"Triphala", sanskrit:"Three fruits", emoji:"🟤", dosha:["vata","pitta","kapha"],
+   benefit:"A gentle tridoshic blend (amla, bibhitaki, haritaki) supporting digestion, regularity and detox.",
+   use:"1/2–1 tsp in warm water before bed.",
+   caution:"May loosen stools at higher doses; avoid in pregnancy or with diarrhoea."},
+  {id:"brahmi", name:"Brahmi", sanskrit:"Bacopa monnieri", emoji:"🍃", dosha:["pitta","vata"],
+   benefit:"Cools and sharpens the mind — traditionally used for memory, focus and mental calm.",
+   use:"As tea, powder or supplement; often taken with a little ghee.",
+   caution:"Can interact with thyroid and sedative medications; introduce slowly."},
+  {id:"turmeric", name:"Turmeric", sanskrit:"Haridra / Curcuma", emoji:"🟡", dosha:["kapha","pitta"],
+   benefit:"Warming and cleansing; a classic anti-inflammatory that supports skin, joints and digestion.",
+   use:"Cook into food, or take as golden milk with black pepper (which boosts absorption).",
+   caution:"High doses may thin blood — care with blood thinners and before surgery."},
+  {id:"tulsi", name:"Tulsi (Holy Basil)", sanskrit:"Ocimum sanctum", emoji:"🌿", dosha:["kapha","vata"],
+   benefit:"An uplifting adaptogen for stress, immunity and clear breathing; lightly energising.",
+   use:"As a daily tea, 1–2 cups.",
+   caution:"May lower blood sugar; avoid large amounts in pregnancy."},
+  {id:"ginger", name:"Ginger", sanskrit:"Adrak / Shunthi", emoji:"🫚", dosha:["vata","kapha"],
+   benefit:"Kindles digestive fire, eases nausea and warms the body from within.",
+   use:"Fresh slices in hot water before meals, or dried powder in cooking.",
+   caution:"Can aggravate Pitta / acidity in excess; care with blood thinners."},
+  {id:"amla", name:"Amla (Amalaki)", sanskrit:"Emblica officinalis", emoji:"🫐", dosha:["pitta","vata","kapha"],
+   benefit:"A cooling, vitamin-C-rich rejuvenative for skin, hair, eyes and digestion.",
+   use:"As powder in water, juice, or part of Triphala/chyawanprash.",
+   caution:"Generally well tolerated; very sour — dilute well."},
+  {id:"shatavari", name:"Shatavari", sanskrit:"Asparagus racemosus", emoji:"🌾", dosha:["pitta","vata"],
+   benefit:"A cooling, nourishing tonic traditionally used to support women's health and vitality.",
+   use:"1/2 tsp powder in warm milk.",
+   caution:"Avoid with estrogen-sensitive conditions; check with a practitioner in pregnancy."},
+  {id:"trikatu", name:"Trikatu", sanskrit:"Three pungents", emoji:"🌶️", dosha:["kapha"],
+   benefit:"Ginger, black & long pepper — a heating blend that fires up slow digestion and metabolism.",
+   use:"A small pinch with honey before meals.",
+   caution:"Heating — avoid with high Pitta, acidity, ulcers or in pregnancy."},
+  {id:"licorice", name:"Licorice (Yashtimadhu)", sanskrit:"Glycyrrhiza glabra", emoji:"🪵", dosha:["vata","pitta"],
+   benefit:"Soothing and moistening for throat, lungs and digestion; naturally sweet.",
+   use:"As tea, or powder in small amounts.",
+   caution:"Can raise blood pressure and lower potassium with prolonged use; avoid in hypertension and pregnancy."}
+];
+
+/* ---------- Food-to-eat guidance (per dosha) ---------- */
+const FOOD_GUIDE = {
+  vata:{ tastes:"Favour sweet, sour & salty · reduce bitter, astringent & pungent",
+    meals:{ Breakfast:"Warm spiced oatmeal or stewed apples with ghee and cinnamon.",
+      Lunch:"Kitchari or rice with cooked root vegetables, dal and a little ghee.",
+      Dinner:"A warm, soupy meal — light but nourishing; avoid raw or cold.",
+      Snack:"Soaked almonds, dates, or warm spiced milk." },
+    note:"Warm, moist, grounding and well-spiced. Regular mealtimes matter most for Vata." },
+  pitta:{ tastes:"Favour sweet, bitter & astringent · reduce sour, salty & pungent",
+    meals:{ Breakfast:"Sweet ripe fruit, soaked oats, or coconut-milk porridge.",
+      Lunch:"Basmati rice, leafy greens, cucumber, and cooling coriander.",
+      Dinner:"Light, cooling — steamed veg, mung dal, a little cilantro.",
+      Snack:"Sweet fruit, dates, or a handful of soaked seeds." },
+    note:"Cooling, fresh and moderate. Don't skip meals — hunger stokes Pitta's fire." },
+  kapha:{ tastes:"Favour pungent, bitter & astringent · reduce sweet, sour & salty",
+    meals:{ Breakfast:"Light or skip; a warm ginger tea or stewed apple if hungry.",
+      Lunch:"Make this the main meal — spiced legumes, plenty of vegetables, millet or barley.",
+      Dinner:"Light and early — a brothy vegetable soup with warming spices.",
+      Snack:"Only if truly hungry — a little fruit or spiced tea." },
+    note:"Light, warm, dry and well-spiced. Go easy on dairy, sweets and heavy oils." }
+};
+
+/* ---------- Premium services ---------- */
+const SERVICES = [
+  {id:"counsel", name:"1:1 Expert Counselling", emoji:"🧑‍⚕️", price:"$59", unit:"/ 45-min session",
+   desc:"A private video consultation with a qualified Ayurvedic practitioner to assess your constitution and concerns and build a personal plan.",
+   bullets:["Detailed prakriti & vikriti assessment","Lifestyle, diet & herb recommendations","Written summary after the call","Follow-up message support for 7 days"], cta:"Book a session"},
+  {id:"diet21", name:"21-Day Diet Program", emoji:"📅", price:"$129", unit:"one-time",
+   desc:"A guided three-week dosha-based eating reset with daily menus, shopping lists and check-ins to rebuild digestion and energy.",
+   bullets:["Personalised 21-day meal plan","Weekly shopping lists & prep guides","Daily habit & recipe prompts","2 group check-in calls"], cta:"Join the program"},
+  {id:"workshop", name:"One-Day Workshop", emoji:"🎟️", price:"$39", unit:"/ ticket",
+   desc:"An immersive live day of yoga, Ayurvedic cooking and breathwork with guest experts — online or in person.",
+   bullets:["Live yoga & pranayama sessions","Hands-on Ayurvedic cooking demo","Q&A with practitioners","Recording & recipe pack included"], cta:"Reserve a spot"},
+  {id:"chart", name:"Customised Diet Chart", emoji:"📋", price:"$45", unit:"one-time",
+   desc:"A tailored, printable diet chart mapping exactly what to eat (and avoid) for your dosha, season and goals.",
+   bullets:["Meal-by-meal daily chart","Foods to favour & foods to reduce","Spice & herb pairings","Seasonal adjustment guide"], cta:"Get my chart"}
+];
+
+/* ---------- Daily Panchang (computed) ---------- */
+const PANCHANG_NAMES = {
+  tithi:["Pratipada","Dvitiya","Tritiya","Chaturthi","Panchami","Shashthi","Saptami","Ashtami","Navami","Dashami","Ekadashi","Dwadashi","Trayodashi","Chaturdashi","Purnima"],
+  nakshatra:["Ashwini","Bharani","Krittika","Rohini","Mrigashira","Ardra","Punarvasu","Pushya","Ashlesha","Magha","Purva Phalguni","Uttara Phalguni","Hasta","Chitra","Swati","Vishakha","Anuradha","Jyeshtha","Mula","Purva Ashadha","Uttara Ashadha","Shravana","Dhanishta","Shatabhisha","Purva Bhadrapada","Uttara Bhadrapada","Revati"],
+  yoga:["Vishkambha","Priti","Ayushman","Saubhagya","Shobhana","Atiganda","Sukarma","Dhriti","Shula","Ganda","Vriddhi","Dhruva","Vyaghata","Harshana","Vajra","Siddhi","Vyatipata","Variyana","Parigha","Shiva","Siddha","Sadhya","Shubha","Shukla","Brahma","Indra","Vaidhriti"],
+  movKarana:["Bava","Balava","Kaulava","Taitila","Gara","Vanija","Vishti (Bhadra)"],
+  vara:[{n:"Ravivara (Sunday)",p:"Sun ☀️",seg:8},{n:"Somavara (Monday)",p:"Moon 🌙",seg:2},{n:"Mangalavara (Tuesday)",p:"Mars ♂️",seg:7},{n:"Budhavara (Wednesday)",p:"Mercury ☿️",seg:5},{n:"Guruvara (Thursday)",p:"Jupiter ♃",seg:6},{n:"Shukravara (Friday)",p:"Venus ♀️",seg:4},{n:"Shanivara (Saturday)",p:"Saturn ♄",seg:3}]
+};
+function _jd(date){
+  let y=date.getUTCFullYear(), m=date.getUTCMonth()+1, d=date.getUTCDate();
+  const hr=date.getUTCHours()+date.getUTCMinutes()/60+date.getUTCSeconds()/3600;
+  if(m<=2){ y-=1; m+=12; }
+  const A=Math.floor(y/100), B=2-A+Math.floor(A/4);
+  return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5+hr/24;
+}
+function _norm(x){ return ((x%360)+360)%360; }
+function _sunLong(jd){
+  const T=(jd-2451545)/36525;
+  const L0=280.46646+36000.76983*T+0.0003032*T*T;
+  const M=(357.52911+35999.05029*T-0.0001537*T*T)*Math.PI/180;
+  const C=(1.914602-0.004817*T-0.000014*T*T)*Math.sin(M)+(0.019993-0.000101*T)*Math.sin(2*M)+0.000289*Math.sin(3*M);
+  return _norm(L0+C);
+}
+function _moonLong(jd){
+  const T=(jd-2451545)/36525, r=Math.PI/180;
+  const Lp=218.3164477+481267.88123421*T;
+  const D=297.8501921+445267.1114034*T;
+  const M=357.5291092+35999.0502909*T;
+  const Mp=134.9633964+477198.8675055*T;
+  const F=93.272095+483202.0175233*T;
+  let l=Lp
+    +6.288774*Math.sin(Mp*r)+1.274027*Math.sin((2*D-Mp)*r)+0.658314*Math.sin(2*D*r)
+    +0.213618*Math.sin(2*Mp*r)-0.185116*Math.sin(M*r)-0.114332*Math.sin(2*F*r)
+    +0.058793*Math.sin((2*D-2*Mp)*r)+0.057066*Math.sin((2*D-M-Mp)*r)
+    +0.053322*Math.sin((2*D+Mp)*r)+0.045758*Math.sin((2*D-M)*r);
+  return _norm(l);
+}
+function computePanchang(date){
+  const jd=_jd(date);
+  const sun=_sunLong(jd), moon=_moonLong(jd);
+  const ayan=23.85+0.013972*(date.getUTCFullYear()-2000);          // Lahiri approximation
+  const sunS=_norm(sun-ayan), moonS=_norm(moon-ayan);
+  // Tithi
+  const diff=_norm(moon-sun);
+  const ti=Math.floor(diff/12);                                    // 0..29
+  const paksha = ti<15 ? "Shukla (waxing)" : "Krishna (waning)";
+  let tName = PANCHANG_NAMES.tithi[ti%15];
+  if(ti===29) tName="Amavasya";                                    // new moon
+  const tithiPct=Math.round(((diff%12)/12)*100);
+  // Nakshatra
+  const nak=Math.floor(moonS/(360/27));
+  // Yoga
+  const yoga=Math.floor(_norm(sunS+moonS)/(360/27));
+  // Karana
+  const kn=Math.floor(diff/6);                                     // 0..59
+  let kName;
+  if(kn===0) kName="Kimstughna"; else if(kn===57) kName="Shakuni";
+  else if(kn===58) kName="Chatushpada"; else if(kn===59) kName="Naga";
+  else kName=PANCHANG_NAMES.movKarana[(kn-1)%7];
+  // Vara + Rahu Kaal (standard 6:00–18:00 day, eight 90-min parts)
+  const vara=PANCHANG_NAMES.vara[date.getDay()];
+  const rs=6*60+(vara.seg-1)*90, re=rs+90;
+  const fmtT=(m)=>{ let h=Math.floor(m/60), mm=m%60; const ap=h<12?"AM":"PM"; h=h%12||12; return `${h}:${mm<10?'0':''}${mm} ${ap}`; };
+  const moonPhase = diff<180 ? Math.round(diff/180*100) : Math.round((360-diff)/180*100);
+  return { paksha, tithi:tName, tithiPct, nakshatra:PANCHANG_NAMES.nakshatra[nak],
+    yoga:PANCHANG_NAMES.yoga[yoga], karana:kName, vara:vara.n, planet:vara.p,
+    rahu:`${fmtT(rs)} – ${fmtT(re)}`, illum:moonPhase, waxing:diff<180 };
+}
+function dayIndex(){ const d=new Date(); const s=new Date(d.getFullYear(),0,0); return Math.floor((d-s)/864e5); }
+function tipOfDay(){ return TIPS[dayIndex()%TIPS.length]; }
+
+/* ---------- 50 Asanas: parametric figure engine ---------- */
+const FIG_L={thigh:15,shin:15,torso:20,upper:10,fore:10,neck:4,head:5};
+function _pt(x,y,ang,len){ const a=ang*Math.PI/180; return [x+len*Math.cos(a), y+len*Math.sin(a)]; }
+// pose = [px,py, torso, lThigh,lShin, rThigh,rShin, lUp,lFore, rUp,rFore]  (absolute degrees, y down)
+function asanaFigure(n, ground){
+  const s=ASANA_POSE[n]; if(!s) return "";
+  const [px,py,t]=s, L=FIG_L;
+  const [sx,sy]=_pt(px,py,t,L.torso);
+  const [hx,hy]=_pt(sx,sy,t,L.neck+L.head);
+  const [lk,lky]=_pt(px,py,s[3],L.thigh),[lf,lfy]=_pt(lk,lky,s[4],L.shin);
+  const [rk,rky]=_pt(px,py,s[5],L.thigh),[rf,rfy]=_pt(rk,rky,s[6],L.shin);
+  const [le,ley]=_pt(sx,sy,s[7],L.upper),[lh,lhy]=_pt(le,ley,s[8],L.fore);
+  const [re,rey]=_pt(sx,sy,s[9],L.upper),[rh,rhy]=_pt(re,rey,s[10],L.fore);
+  // chest sits partway up the torso; neck a little beyond the shoulders
+  const [cx,cy]=_pt(px,py,t,L.torso*0.62);
+  const [nx,ny]=_pt(sx,sy,t,L.neck);
+  const f=x=>x.toFixed(1);
+  const seg=(a,b,c,e,w)=>`<path d="M${f(a)} ${f(b)} L${f(c)} ${f(e)}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round"/>`;
+  const body=
+    seg(px,py,sx,sy,9.5)+                                   // trunk
+    seg(px,py,lk,lky,7)+seg(lk,lky,lf,lfy,5)+              // left leg (thigh→shin)
+    seg(px,py,rk,rky,7)+seg(rk,rky,rf,rfy,5)+              // right leg
+    seg(sx,sy,le,ley,5)+seg(le,ley,lh,lhy,3.8)+           // left arm (upper→fore)
+    seg(sx,sy,re,rey,5)+seg(re,rey,rh,rhy,3.8)+           // right arm
+    `<circle cx="${f(px)}" cy="${f(py)}" r="4.6" fill="currentColor"/>`+   // pelvis/hips
+    `<circle cx="${f(cx)}" cy="${f(cy)}" r="4.3" fill="currentColor"/>`+   // mid-torso
+    `<circle cx="${f(sx)}" cy="${f(sy)}" r="4.8" fill="currentColor"/>`+   // shoulders
+    seg(sx,sy,nx,ny,4)+                                     // neck
+    `<circle cx="${f(hx)}" cy="${f(hy)}" r="6" fill="currentColor"/>`;     // head
+  return `<svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block" role="img" aria-label="${ASANAS[n-1].name} figure">`+
+    (ground?`<line x1="6" y1="82" x2="94" y2="82" stroke="currentColor" stroke-opacity=".16" stroke-width="1.4"/>`:"")+
+    body+`</svg>`;
+}
+const ASANA_POSE={
+1:[50,58,-90,83,87,97,93,104,98,76,82],2:[50,44,145,60,60,60,60,122,122,122,122],
+3:[46,56,-86,60,86,128,120,-82,-82,-98,-98],4:[50,54,-90,138,138,52,90,178,178,2,2],
+5:[40,50,-8,176,176,92,90,-6,-6,-6,-6],6:[52,54,-58,142,142,40,40,-66,-66,92,92],
+7:[52,54,-42,140,140,56,92,-34,-34,120,120],8:[44,52,-16,4,4,92,90,-92,-92,96,96],
+9:[50,58,-90,150,18,95,92,-84,-84,-96,-96],10:[50,58,-74,62,95,74,95,-78,-78,-102,-102],
+11:[50,56,-88,94,84,98,92,-48,-72,-132,-108],12:[50,50,120,60,60,100,100,120,120,100,100],
+13:[50,52,150,62,62,100,100,150,150,150,150],14:[48,54,120,150,150,40,40,118,118,118,118],
+15:[50,40,140,150,150,30,30,120,120,120,120],16:[46,54,-92,58,88,132,128,-80,-80,-100,-100],
+17:[46,58,-90,150,150,60,96,-80,-80,-100,-100],18:[50,66,-90,150,196,30,-16,120,120,60,60],
+19:[50,66,-90,155,205,25,-25,-84,-84,-96,-96],20:[50,64,-90,4,4,176,176,88,90,92,90],
+21:[50,64,10,6,6,174,174,6,6,6,6],22:[50,64,4,20,20,176,176,4,4,6,6],
+23:[50,66,-90,150,150,30,30,120,120,60,60],24:[50,64,-80,-6,120,176,176,-22,-28,125,150],
+25:[50,64,-78,-8,122,174,174,-18,-24,130,150],26:[50,66,-62,-32,-32,-30,-30,-12,-12,-12,-12],
+27:[50,64,-90,132,176,48,4,100,96,80,84],28:[50,64,-90,150,20,30,160,-60,140,120,-40],
+29:[50,58,-90,55,120,125,60,-84,-84,-96,-96],30:[46,60,-40,178,178,40,86,120,120,-30,-30],
+31:[54,62,-42,178,178,178,178,130,120,-30,-30],32:[54,58,-48,176,176,176,176,120,90,-60,-60],
+33:[56,64,-20,178,178,178,178,150,180,150,180],34:[50,58,-46,200,250,200,250,150,210,150,210],
+35:[52,62,10,182,182,178,178,150,150,150,150],36:[50,64,-30,30,74,30,74,100,96,80,84],
+37:[50,46,122,62,120,62,120,120,152,120,152],38:[50,52,-58,96,182,96,178,34,60,26,54],
+39:[54,62,6,174,174,174,174,96,96,96,96],40:[54,66,4,174,174,174,174,100,80,100,80],
+41:[52,60,-30,150,150,150,150,-90,-90,90,90],42:[50,52,60,130,60,130,60,100,150,80,30],
+43:[50,60,-140,-84,-84,-96,-96,150,150,150,150],44:[50,44,90,-89,-89,-91,-91,-70,-18,-110,-162],
+45:[56,34,150,200,120,200,120,150,150,150,150],46:[50,45,90,-88,-88,-92,-92,152,150,28,30],
+47:[50,66,-90,-60,-10,-120,-170,-30,20,-150,-20],48:[56,74,184,-58,-118,-122,-62,150,150,150,150],
+49:[50,60,150,45,45,45,45,150,150,150,150],50:[50,70,4,6,6,174,174,20,20,160,160]
+};
+const ASANAS=[
+ {n:1,name:"Mountain Pose",sk:"Tadasana",grp:"stand",ben:"Grounding & posture alignment",cue:"Stand with big toes touching, heels slightly apart. Ground through all four corners of the feet, engage the thighs, lengthen the spine and lift through the crown; roll the shoulders back and down."},
+ {n:2,name:"Downward-Facing Dog",sk:"Adho Mukha Svanasana",grp:"stand",ben:"Full-body stretch & inversion",cue:"From hands and knees, spread the fingers, tuck the toes and lift the hips up and back into an inverted V. Keep the spine long — a soft bend in the knees is fine."},
+ {n:3,name:"Warrior I",sk:"Virabhadrasana I",grp:"stand",ben:"Hip-flexor stretch & strength",cue:"From a lunge, turn the back foot in ~45°, square the hips forward, bend the front knee over the ankle and reach both arms overhead."},
+ {n:4,name:"Warrior II",sk:"Virabhadrasana II",grp:"stand",ben:"Hip opening & leg strength",cue:"Step the feet wide, turn the front foot out 90°, bend the front knee over the ankle and extend the arms parallel to the floor, gazing over the front hand."},
+ {n:5,name:"Warrior III",sk:"Virabhadrasana III",grp:"stand",ben:"Balance & core strength",cue:"From standing, hinge forward and lift one leg straight back to hip height, reaching the arms forward so body and leg form one line parallel to the floor."},
+ {n:6,name:"Triangle Pose",sk:"Trikonasana",grp:"stand",ben:"Side-body stretch & hamstring flexibility",cue:"Legs wide and straight, front foot out. Reach forward and tip from the hip, lowering the front hand to shin or floor and stacking the top arm skyward."},
+ {n:7,name:"Extended Side Angle",sk:"Utthita Parsvakonasana",grp:"stand",ben:"Stamina & deep hip stretch",cue:"From Warrior II, rest the front forearm on the thigh (or hand to floor) and sweep the top arm over the ear — one long line from back foot to fingertips."},
+ {n:8,name:"Half Moon Pose",sk:"Ardha Chandrasana",grp:"stand",ben:"Balance & lateral stretch",cue:"From Triangle, bend the front knee, step the back foot in and lift it to hip height; balance on the bottom hand as the top arm rises."},
+ {n:9,name:"Tree Pose",sk:"Vrksasana",grp:"stand",ben:"Focus & ankle stabilization",cue:"Root down through one leg; place the other foot on the inner calf or thigh (never the knee). Press foot and leg together and bring the hands to the heart or overhead."},
+ {n:10,name:"Chair Pose",sk:"Utkatasana",grp:"stand",ben:"Quad strength & core heat",cue:"From Mountain, bend the knees and sit the hips back as if into a chair, weight in the heels, chest lifted, arms reaching alongside the ears."},
+ {n:11,name:"Eagle Pose",sk:"Garudasana",grp:"stand",ben:"Joint opening & focus",cue:"Cross one thigh over the other (hook the foot if you can), then cross the opposite arm under and wrap the forearms, lifting the elbows as you sink the hips."},
+ {n:12,name:"Standing Forward Bend",sk:"Uttanasana",grp:"stand",ben:"Hamstring stretch & mental calm",cue:"From standing, hinge at the hips and fold over the legs, letting the head and arms hang; soften the knees to protect the hamstrings."},
+ {n:13,name:"Half Forward Fold",sk:"Ardha Uttanasana",grp:"stand",ben:"Spinal extension & posture prep",cue:"From a forward fold, lift the chest halfway, fingertips to shins, and lengthen the spine to a flat back."},
+ {n:14,name:"Pyramid Pose",sk:"Parsvottanasana",grp:"stand",ben:"Deep hamstring & calf stretch",cue:"Feet hip-width, one foot forward and hips square; fold over the front leg with a long spine."},
+ {n:15,name:"Wide-Legged Forward Fold",sk:"Prasarita Padottanasana",grp:"stand",ben:"Inner-thigh stretch & mild inversion",cue:"Step the feet wide and parallel, hinge from the hips and fold, crown toward the floor, hands on the floor or ankles."},
+ {n:16,name:"High Lunge",sk:"Ashta Chandrasana",grp:"stand",ben:"Psoas stretch & dynamic balance",cue:"Step one foot back with the heel lifted, front knee over the ankle; lift the torso and reach the arms overhead."},
+ {n:17,name:"Low Lunge",sk:"Anjaneyasana",grp:"stand",ben:"Deep hip-flexor release",cue:"From a lunge, lower the back knee to the floor and sink the hips forward and down; reach the arms up to open the front hip."},
+ {n:18,name:"Easy Pose",sk:"Sukhasana",grp:"seat",ben:"Meditation seat & hip opening",cue:"Sit cross-legged with the shins crossed, sit bones grounded and spine tall — a simple seat for breath and meditation."},
+ {n:19,name:"Lotus Pose",sk:"Padmasana",grp:"seat",ben:"Advanced meditation seat",cue:"Place each foot on the opposite thigh, soles up, knees toward the floor, spine tall. Never force the knees."},
+ {n:20,name:"Staff Pose",sk:"Dandasana",grp:"seat",ben:"Core engagement & postural awareness",cue:"Sit with legs straight in front, feet flexed, hands beside the hips, spine tall — the seated equivalent of Mountain."},
+ {n:21,name:"Seated Forward Bend",sk:"Paschimottanasana",grp:"seat",ben:"Posterior-chain stretch & cooling",cue:"Sit with legs extended; inhale to lengthen, exhale and hinge at the hips to fold over the legs with a long spine."},
+ {n:22,name:"Head-to-Knee Forward Bend",sk:"Janu Sirsasana",grp:"seat",ben:"Asymmetrical hamstring stretch",cue:"Extend one leg, sole of the other foot to the inner thigh; fold over the straight leg, squaring the chest toward the knee."},
+ {n:23,name:"Bound Angle / Butterfly",sk:"Baddha Konasana",grp:"seat",ben:"Groin & inner-thigh release",cue:"Bring the soles of the feet together, letting the knees fall open; hold the feet and lengthen the spine."},
+ {n:24,name:"Half Lord of the Fishes",sk:"Ardha Matsyendrasana",grp:"seat",ben:"Spinal mobility & digestion",cue:"Cross one foot outside the opposite thigh; twist toward the top knee, hooking the elbow and looking over the back shoulder."},
+ {n:25,name:"Marichi's Pose",sk:"Marichyasana",grp:"seat",ben:"Deep seated twist & shoulder stretch",cue:"With one knee bent and foot flat, wrap the arm around the shin and twist deeply toward the bent knee."},
+ {n:26,name:"Boat Pose",sk:"Navasana",grp:"seat",ben:"Core strength & hip-flexor endurance",cue:"Balance on the sit bones, lift the legs and lean the torso back to form a V, reaching the arms forward alongside the shins."},
+ {n:27,name:"Hero Pose",sk:"Virasana",grp:"seat",ben:"Knee & ankle stretch",cue:"Kneel with the hips settling between the heels, tops of the feet on the floor, spine tall."},
+ {n:28,name:"Cow Face Pose",sk:"Gomukhasana",grp:"seat",ben:"Outer-hip & deep shoulder opening",cue:"Stack the knees, one over the other; reach one arm up and the other behind, clasping the hands to open the shoulders."},
+ {n:29,name:"Garland Pose / Squat",sk:"Malasana",grp:"seat",ben:"Lower-back release & hip mobility",cue:"Squat with the feet a little wider than the hips, heels down if you can; press the elbows against the inner knees, palms at the heart."},
+ {n:30,name:"Pigeon Pose",sk:"Kapotasana",grp:"seat",ben:"Intense glute & piriformis stretch",cue:"From all fours, bring one shin forward and extend the back leg straight behind; square the hips and fold over the front shin."},
+ {n:31,name:"Cobra Pose",sk:"Bhujangasana",grp:"back",ben:"Spinal extension & chest opening",cue:"Lie on the belly, hands under the shoulders and elbows hugging the ribs; inhale and lift the chest using the back, low ribs staying down."},
+ {n:32,name:"Upward-Facing Dog",sk:"Urdhva Mukha Svanasana",grp:"back",ben:"Arm strength & deep backbend",cue:"Press into the hands to straighten the arms, lifting the chest and thighs off the floor, shoulders over the wrists."},
+ {n:33,name:"Sphinx Pose",sk:"Salamba Bhujangasana",grp:"back",ben:"Gentle lower-back compression",cue:"Lie on the belly and prop up on the forearms, elbows under the shoulders, for a gentle supported backbend."},
+ {n:34,name:"Bow Pose",sk:"Dhanurasana",grp:"back",ben:"Front-body stretch & spine strength",cue:"On the belly, bend the knees and reach back to hold the ankles; kick the feet into the hands to lift the chest and thighs."},
+ {n:35,name:"Locust Pose",sk:"Salabhasana",grp:"back",ben:"Posterior-chain strengthening",cue:"Lie face down, arms alongside; lift the chest, arms and legs away from the floor, strengthening the whole back body."},
+ {n:36,name:"Bridge Pose",sk:"Setu Bandhasana",grp:"back",ben:"Glute engagement & heart opening",cue:"On the back, knees bent and feet hip-width; press into the feet to lift the hips, clasping the hands beneath the back."},
+ {n:37,name:"Wheel Pose",sk:"Urdhva Dhanurasana",grp:"back",ben:"Advanced full front-body opening",cue:"Place the hands by the ears and press up into a full backbend, arms and legs straight, chest opening. Warm up well first."},
+ {n:38,name:"Camel Pose",sk:"Ustrasana",grp:"back",ben:"Deep core & chest stretch",cue:"Kneel hip-width; hands to the low back or heels, lift the chest and arch back, hips pressing forward over the knees."},
+ {n:39,name:"Plank Pose",sk:"Phalakasana",grp:"back",ben:"Full-body integration & core stability",cue:"Extend the legs back and hold the body in one straight line, core engaged, shoulders over the wrists."},
+ {n:40,name:"Four-Limbed Staff",sk:"Chaturanga Dandasana",grp:"back",ben:"Tricep & core strength",cue:"From Plank, shift forward and lower halfway with the elbows hugging the ribs, body straight and strong."},
+ {n:41,name:"Side Plank",sk:"Vasisthasana",grp:"back",ben:"Oblique strength & lateral balance",cue:"From Plank, roll onto one hand and the outer edge of the foot, stacking the hips and reaching the top arm skyward."},
+ {n:42,name:"Crow Pose",sk:"Bakasana",grp:"back",ben:"Arm strength, wrist stability & focus",cue:"Squat, plant the hands, bend the elbows into a shelf and rest the knees on the upper arms; lean forward until the feet float."},
+ {n:43,name:"Legs-Up-The-Wall",sk:"Viparita Karani",grp:"back",ben:"Circulation & deep relaxation",cue:"Lie on the back and rest the legs straight up a wall, arms relaxed — a deeply restorative inversion."},
+ {n:44,name:"Supported Shoulderstand",sk:"Salamba Sarvangasana",grp:"back",ben:"Thyroid stimulation & inversion",cue:"Lift the legs and hips overhead, supporting the low back with the hands, body stacking toward vertical. Protect the neck."},
+ {n:45,name:"Plow Pose",sk:"Halasana",grp:"back",ben:"Neck & upper-back stretch",cue:"From Shoulderstand, lower the straight legs overhead toward the floor behind the head, hands supporting or extended."},
+ {n:46,name:"Headstand",sk:"Sirsasana",grp:"back",ben:"Advanced balance & core control",cue:"Forearms down, crown lightly on the floor; walk the feet in and lift the legs to vertical, core engaged. Build up slowly."},
+ {n:47,name:"Happy Baby Pose",sk:"Ananda Balasana",grp:"back",ben:"Lower-back release & hip stretch",cue:"On the back, draw the knees toward the armpits and hold the outer feet, gently rocking to release the hips and low back."},
+ {n:48,name:"Reclining Bound Angle",sk:"Supta Baddha Konasana",grp:"back",ben:"Passive hip & chest opening",cue:"Lie back with the soles of the feet together and knees falling open; rest the arms and let gravity open the hips and chest."},
+ {n:49,name:"Child's Pose",sk:"Balasana",grp:"back",ben:"Resting posture & spinal stretch",cue:"Kneel and fold the torso over the thighs, forehead to the floor, arms forward or by the sides — a restful reset."},
+ {n:50,name:"Corpse Pose",sk:"Savasana",grp:"back",ben:"Final relaxation & integration",cue:"Lie flat on the back, legs and arms relaxed and open, palms up; release all effort and breathe naturally."}
+];
+const ASANA_GROUPS=[["all","All 50"],["stand","Standing & Balancing"],["seat","Seated & Twisting"],["back","Backbends & Inversions"]];
+
 /* =========================================================
    Router
    ========================================================= */
 const TABS = [
-  ["home","Home"],["dosha","My Dosha"],["yoga","Yoga"],
+  ["home","Home"],["dosha","My Dosha"],["panchang","Panchang"],["yoga","Yoga"],["asanas","Asanas"],
   ["breathe","Breathe"],["meditate","Meditate"],
-  ["ayurveda","Ayurveda"],["diy","DIYs"],["recipes","Recipes"],
+  ["ayurveda","Ayurveda"],["food","Food"],["herbs","Herbs"],["diy","DIYs"],["recipes","Recipes"],
   ["progress","Progress"],["premium","Premium"]
 ];
 let current = "home";
+const NAV_ICONS={home:"🏠",dosha:"🧭",panchang:"🗓️",yoga:"🧘",asanas:"🤸",breathe:"🌬️",meditate:"🧠",ayurveda:"🌿",food:"🍽️",herbs:"🌱",diy:"🫗",recipes:"🍲",progress:"📈",premium:"⭐"};
+const NAV_GROUPS=[
+  ["Daily",["home","dosha","panchang"]],
+  ["Practice",["yoga","asanas","breathe","meditate"]],
+  ["Ayurveda",["ayurveda","food","herbs","diy","recipes"]],
+  ["You",["progress","premium"]]
+];
+const tabLabel=id=>(TABS.find(t=>t[0]===id)||[,id])[1];
 function renderTabs(){
-  document.getElementById("tabs").innerHTML = TABS.map(([id,label])=>
-    `<button class="tab ${id===current?'active':''}" onclick="go('${id}')">${label}</button>`).join("");
+  document.getElementById("tabs").innerHTML = NAV_GROUPS.map(([g,ids])=>
+    `<div class="side-sect">${g}</div>`+ids.map(id=>
+      `<button class="tab ${id===current?'active':''}" onclick="go('${id}')"><span class="ti">${NAV_ICONS[id]||''}</span>${tabLabel(id)}</button>`).join("")
+  ).join("");
 }
-function go(id){ current=id; renderTabs(); window.scrollTo(0,0); document.getElementById("app").innerHTML = VIEWS[id](); if(AFTER[id]) AFTER[id](); }
+function openNav(){ document.getElementById("sidebar").classList.add("open"); document.getElementById("scrim").classList.add("open"); const b=document.getElementById("menuBtn"); if(b) b.setAttribute("aria-expanded","true"); }
+function closeNav(){ document.getElementById("sidebar").classList.remove("open"); document.getElementById("scrim").classList.remove("open"); const b=document.getElementById("menuBtn"); if(b) b.setAttribute("aria-expanded","false"); }
+function go(id){
+  current=id; renderTabs(); closeNav();
+  const ct=document.getElementById("curTitle"); if(ct) ct.textContent=tabLabel(id);
+  window.scrollTo(0,0);
+  document.getElementById("app").innerHTML = VIEWS[id](); if(AFTER[id]) AFTER[id]();
+}
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeNav(); });
 
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
 
@@ -478,6 +817,15 @@ VIEWS.home = () => {
         <div class="stat"><b>${store.minutes}</b><span>total minutes</span></div>
         <div class="stat"><b>${store.streak}🔥</b><span>day streak</span></div>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;border-left:4px solid var(--accent)">
+      <div class="row" style="justify-content:space-between">
+        <span class="pill" style="background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)">💡 Ayurvedic tip of the day</span>
+        <span class="muted" style="font-size:13px">${new Date().toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})}</span>
+      </div>
+      <p style="font-size:18px;margin:.6em 0 0">${tipOfDay()}</p>
+      <div class="row" style="margin-top:10px"><button class="btn ghost sm" onclick="go('panchang')">Today's Panchang →</button><button class="btn ghost sm" onclick="go('food')">What to eat today →</button></div>
     </div>
 
     <h2>How Sattva works</h2>
@@ -623,6 +971,44 @@ function seqCard(s){
     <div class="row" style="margin:10px 0 14px"><span class="tag">⏱ ${totalMin(s)} min</span><span class="tag">${s.poses.length} poses</span><span class="tag">🎯 ${s.goal}</span></div>
     <button class="btn" onclick="openPlayer('${s.id}')">▶ Start practice</button>
   </div>`;
+}
+
+/* ---------- 50 Asanas library ---------- */
+let asanaFilter="all";
+const GRP_LABEL={stand:"Standing",seat:"Seated",back:"Backbend / Inversion"};
+VIEWS.asanas = () => {
+  const list = asanaFilter==="all" ? ASANAS : ASANAS.filter(a=>a.grp===asanaFilter);
+  return `<section class="view">
+    <span class="pill">Illustrated guide</span>
+    <h1>50 essential asanas</h1>
+    <p class="lead">A complete illustrated reference of 50 key yoga poses — each with a figure, its Sanskrit name, primary benefit and how to do it. Tap any pose for the full guide.</p>
+    <div class="row" style="margin:16px 0">
+      ${ASANA_GROUPS.map(([k,l])=>`<button class="tab ${asanaFilter===k?'active':''}" onclick="setAsana('${k}')">${l}</button>`).join("")}
+    </div>
+    <div class="grid cols-3">
+      ${list.map(a=>`<div class="card" style="cursor:pointer;color:var(--brand-2)" onclick="openAsana(${a.n})">
+        <div style="height:120px;background:color-mix(in srgb,var(--brand) 7%,transparent);border-radius:12px;padding:8px">${asanaFigure(a.n,true)}</div>
+        <div class="row" style="justify-content:space-between;margin-top:10px"><b style="color:var(--ink)">${a.n}. ${a.name}</b></div>
+        <p class="muted" style="margin:.1em 0 .3em;font-style:italic">${a.sk}</p>
+        <p class="muted" style="margin:0;font-size:13px">${a.ben}</p>
+      </div>`).join("")}
+    </div>
+    <p class="disc" style="margin-top:16px">Figures are simplified reference illustrations. Move within a comfortable range, warm up first, and skip or modify anything that causes pain — seek a qualified teacher for advanced poses (inversions, deep backbends, arm balances).</p>
+  </section>`;
+};
+function setAsana(k){ asanaFilter=k; go('asanas'); }
+function openAsana(n){
+  const a=ASANAS[n-1]; if(!a) return;
+  document.body.insertAdjacentHTML("beforeend",
+   `<div class="modal" onclick="this.remove()"><div class="box" onclick="event.stopPropagation()" style="max-width:460px">
+      <div class="row" style="justify-content:space-between"><span class="tag">${GRP_LABEL[a.grp]}</span><button class="btn ghost sm" onclick="this.closest('.modal').remove()">✕</button></div>
+      <div style="height:180px;color:var(--brand-2);background:color-mix(in srgb,var(--brand) 7%,transparent);border-radius:14px;margin:12px 0;padding:10px">${asanaFigure(n,true)}</div>
+      <h2 style="margin:0">${a.n}. ${a.name}</h2>
+      <p class="muted" style="margin:.1em 0 .6em;font-style:italic">${a.sk}</p>
+      <p><b>Benefit:</b> <span class="muted">${a.ben}</span></p>
+      <h3 style="margin-top:12px">How to do it</h3>
+      <p class="muted" style="margin:.2em 0 0">${a.cue}</p>
+   </div></div>`);
 }
 
 /* ---------- Practice player ---------- */
@@ -1032,6 +1418,125 @@ function openDetail(kind, id){
    </div></div>`);
 }
 
+/* ---------- Daily Panchang ---------- */
+VIEWS.panchang = () => {
+  const now=new Date();
+  const p=computePanchang(now);
+  const dateStr=now.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const limb=(icon,label,val,sub)=>`<div class="card"><div class="row" style="gap:8px"><span style="font-size:26px">${icon}</span><div><div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px">${label}</div><b style="font-size:19px">${val}</b>${sub?`<div class="muted" style="font-size:13px">${sub}</div>`:""}</div></div></div>`;
+  return `<section class="view">
+    <span class="pill">Vedic almanac</span>
+    <h1>Daily Panchang</h1>
+    <p class="lead">The five limbs (panch-anga) of the Vedic day — computed for today. Traditionally used to time practice, fasting and meals in harmony with the moon.</p>
+
+    <div class="card" style="margin:16px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;background:
+      radial-gradient(120% 140% at 90% 10%, color-mix(in srgb,var(--brand) 16%,transparent), transparent 60%), var(--panel)">
+      <div><div class="muted">${dateStr}</div><h3 style="margin:.15em 0 0">${p.vara}</h3><div class="muted">Ruled by ${p.planet}</div></div>
+      <div class="center"><div style="font-size:40px">${p.waxing?'🌔':'🌘'}</div><div class="muted" style="font-size:13px">Moon ~${p.illum}% · ${p.waxing?'waxing':'waning'}</div></div>
+    </div>
+
+    <div class="grid cols-3">
+      ${limb("🌙","Tithi",p.tithi,`${p.paksha} · ${p.tithiPct}% elapsed`)}
+      ${limb("⭐","Nakshatra",p.nakshatra,"Moon's lunar mansion")}
+      ${limb("🧘","Yoga",p.yoga,"Sun–Moon combination")}
+      ${limb("⏳","Karana",p.karana,"Half-tithi")}
+      ${limb("📅","Vara",p.vara.split(" ")[0],"Weekday")}
+      ${limb("⚠️","Rahu Kaal",p.rahu,"Inauspicious — avoid new starts")}
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>💡 Today's alignment</h3>
+      <p class="muted">${p.waxing
+        ? "The waxing moon favours building, beginning and growth — a good time to start new practices, plans and nourishing routines."
+        : "The waning moon favours releasing, cleansing and letting go — a good time for detox, decluttering and gentle, restorative practice."}</p>
+      <p class="muted" style="margin-top:6px">Ayurvedic tip: ${tipOfDay()}</p>
+    </div>
+
+    <p class="disc" style="margin-top:16px">This Panchang is computed from geocentric lunar &amp; solar positions (Lahiri ayanamsa, approximate) and a standard 6:00 AM–6:00 PM day for Rahu Kaal — it is not localised to your exact sunrise or timezone. For ritual precision, cross-check with a location-specific almanac.</p>
+  </section>`;
+};
+
+/* ---------- Food to eat ---------- */
+let foodTab=null;
+VIEWS.food = () => {
+  const active=foodTab||store.dosha||"vata";
+  const d=DOSHAS[active], a=AYUR[active], g=FOOD_GUIDE[active];
+  const hr=new Date().getHours();
+  const period = hr<11?"Breakfast":hr<16?"Lunch":hr<21?"Dinner":"Snack";
+  return `<section class="view">
+    <span class="pill">Eat for balance</span>
+    <h1>Food to eat</h1>
+    <p class="lead">What to put on your plate for your dosha — right now and through the day. ${store.dosha?"":"Take the dosha quiz to personalise this."}</p>
+    <div class="row" style="margin:16px 0">
+      ${Object.values(DOSHAS).map(x=>`<button class="tab ${active===x.key?'active':''}" onclick="setFood('${x.key}')"><span class="dosha-dot ${x.cls}"></span>&nbsp;${x.name}</button>`).join("")}
+    </div>
+
+    <div class="card" style="border-left:4px solid ${d.color}">
+      <span class="pill">Right now · ${period}</span>
+      <p style="font-size:18px;margin:.5em 0 0">${g.meals[period]}</p>
+      <p class="muted" style="margin-top:6px">${g.tastes}</p>
+    </div>
+
+    <h2>Through the day</h2>
+    <div class="grid cols-2">
+      ${Object.entries(g.meals).map(([meal,txt])=>`<div class="card"><div class="row" style="justify-content:space-between"><b>${meal}</b>${meal===period?'<span class="tag">now</span>':''}</div><p class="muted" style="margin:.4em 0 0">${txt}</p></div>`).join("")}
+    </div>
+
+    <h2>Favour &amp; reduce</h2>
+    <div class="grid cols-2">
+      <div class="card foodcol"><h3 class="favor">✓ Eat freely</h3><ul>${a.favor.map(f=>`<li>${f}</li>`).join("")}</ul></div>
+      <div class="card foodcol"><h3 class="reduce">✕ Go easy on</h3><ul>${a.reduce.map(f=>`<li>${f}</li>`).join("")}</ul></div>
+    </div>
+    <div class="card" style="margin-top:16px"><p style="margin:0"><b>Guiding principle:</b> <span class="muted">${g.note}</span></p></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" onclick="go('recipes')">Browse recipes →</button>
+      <button class="btn ghost" onclick="go('herbs')">Herbal recommendations →</button>
+    </div>
+  </section>`;
+};
+function setFood(k){ foodTab=k; go('food'); }
+
+/* ---------- Herbal recommendations ---------- */
+let herbFilter="mine";
+VIEWS.herbs = () => {
+  const filters=[["mine","For me"],["vata","Vata"],["pitta","Pitta"],["kapha","Kapha"],["all","All"]];
+  let list=HERBS;
+  if(herbFilter==="mine" && store.dosha) list=HERBS.filter(h=>h.dosha.includes(store.dosha));
+  else if(["vata","pitta","kapha"].includes(herbFilter)) list=HERBS.filter(h=>h.dosha.includes(herbFilter));
+  return `<section class="view">
+    <span class="pill">Herbal recommendations</span>
+    <h1>Herbs &amp; adaptogens</h1>
+    <p class="lead">Time-honoured Ayurvedic herbs, what they're traditionally used for, and how to take them. ${store.dosha?`Showing herbs suited to <b>${DOSHAS[store.dosha].name}</b> by default.`:"Take the dosha quiz to see herbs suited to you."} Tap a herb for full details.</p>
+    <div class="row" style="margin:16px 0">
+      ${filters.map(([k,l])=>`<button class="tab ${herbFilter===k?'active':''}" onclick="setHerb('${k}')">${l}</button>`).join("")}
+    </div>
+    <div class="grid cols-3">
+      ${list.map(h=>`<div class="card" style="cursor:pointer" onclick="openHerb('${h.id}')">
+        <div style="font-size:32px">${h.emoji}</div>
+        <h3 style="margin:.3em 0 .1em">${h.name}</h3>
+        <p class="muted" style="font-size:13px;margin:0 0 .5em">${h.sanskrit}</p>
+        <p class="muted" style="margin:0">${h.benefit}</p>
+        <div class="row" style="margin-top:10px">${h.dosha.map(x=>`<span class="tag"><span class="dosha-dot ${DOSHAS[x].cls}"></span>&nbsp;${DOSHAS[x].name}</span>`).join("")}</div>
+      </div>`).join("")}
+    </div>
+    <p class="disc" style="margin-top:16px">Educational only. Herbs are potent and can interact with medications, pregnancy and health conditions — consult a qualified practitioner or doctor before starting any herb.</p>
+  </section>`;
+};
+function setHerb(k){ herbFilter=k; go('herbs'); }
+function openHerb(id){
+  const h=HERBS.find(x=>x.id===id); if(!h) return;
+  document.body.insertAdjacentHTML("beforeend",
+   `<div class="modal" onclick="this.remove()"><div class="box" onclick="event.stopPropagation()" style="max-width:480px">
+      <div class="row" style="justify-content:space-between"><span style="font-size:40px">${h.emoji}</span><button class="btn ghost sm" onclick="this.closest('.modal').remove()">✕</button></div>
+      <h2 style="margin:.2em 0 0">${h.name}</h2>
+      <p class="muted" style="margin:.1em 0 .6em">${h.sanskrit}</p>
+      <div class="row" style="margin-bottom:12px">${h.dosha.map(x=>`<span class="tag"><span class="dosha-dot ${DOSHAS[x].cls}"></span>&nbsp;Balances ${DOSHAS[x].name}</span>`).join("")}</div>
+      <p><b>Benefits:</b> <span class="muted">${h.benefit}</span></p>
+      <p style="margin-top:8px"><b>How to use:</b> <span class="muted">${h.use}</span></p>
+      <p class="disc" style="margin-top:10px"><b>⚠ Caution:</b> ${h.caution}</p>
+   </div></div>`);
+}
+
 /* ---------- Premium ---------- */
 VIEWS.premium = () => `
   <section class="view">
@@ -1074,6 +1579,19 @@ VIEWS.premium = () => `
       </div>
     </div>
 
+    <h2>Premium services</h2>
+    <p class="lead" style="font-size:16px">One-to-one and live offerings from qualified practitioners — book what you need.</p>
+    <div class="grid cols-2">
+      ${SERVICES.map(s=>`<div class="card tier">
+        <div class="row" style="justify-content:space-between"><span style="font-size:32px">${s.emoji}</span>
+          <div class="center"><div class="price" style="font-size:26px">${s.price}</div><div class="muted" style="font-size:12px">${s.unit}</div></div></div>
+        <h3 style="margin:.3em 0 .2em">${s.name}</h3>
+        <p class="muted" style="margin:.2em 0">${s.desc}</p>
+        <ul>${s.bullets.map(b=>`<li>${b}</li>`).join("")}</ul>
+        <button class="btn" onclick="fakeBuy('${s.name.replace(/'/g,"")}')">${s.cta}</button>
+      </div>`).join("")}
+    </div>
+
     <h2>A peek inside Plus</h2>
     <div class="grid cols-2">
       <div class="card locked-wrap">
@@ -1110,6 +1628,7 @@ function unlockDemo(el){ store.premium=true; save(); el.closest('.modal').remove
 /* ---------- boot ---------- */
 renderTabs();
 go('home');
+openNav();   // show the sidebar on first load so all sections are visible; it auto-hides on selection
 
 /* register the site's service worker if present (offline support) */
 if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }catch(e){} }
