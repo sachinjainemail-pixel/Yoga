@@ -1,4 +1,4 @@
 # Yoga-Fi — Yoga & Ayurveda
 
 Self-contained app. Upload index.html + yoga.html to your repo.
-Logo is Aditi meditating at sunrise (embedded).
+New: chakra symbols, meditation logo, On the Go & How To-Now sections.
